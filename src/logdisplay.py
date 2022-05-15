@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
     QWidget
 )
 
+
 class LogDisplay(QWidget):
     def __init__(self):
         super(LogDisplay, self).__init__()

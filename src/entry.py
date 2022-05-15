@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
     QWidget
 )
 
+
 class Entry(QWidget):
     def __init__(self, name="", port=22, index=-1):
         super(Entry, self).__init__()

@@ -4,15 +4,16 @@ import subprocess
 import traceback
 import os
 from PyQt5 import uic
+from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QMainWindow,
     QLineEdit,
-    QMessageBox,
-    QVBoxLayout
+    QMessageBox
 )
 from entry import Entry
 from logdisplay import LogDisplay
+
 
 class HomePage(QMainWindow):
     java = "java"
@@ -21,6 +22,8 @@ class HomePage(QMainWindow):
 
     def __init__(self) -> None:
         super(HomePage, self).__init__()
+        # Dictionary for all QProcess objects
+        self.processes = {}
         self.logDisplay = LogDisplay()
         self.initUI()
         self.load()
@@ -36,6 +39,8 @@ class HomePage(QMainWindow):
         uic.loadUi(os.path.join(myPath, "ui", uiFile), self)
         xIcon = "close.svg"
         self.closeEditorBtn.setIcon(QIcon(os.path.join(myPath, "ui", xIcon)))
+        addIcon = "plus.svg"
+        self.addBtn.setIcon(QIcon(os.path.join(myPath, "ui", addIcon)))
         self.centralLayout.addWidget(self.logDisplay)
         # TODO: Scale the image to fit window
         self.setStyleSheet(
@@ -53,6 +58,9 @@ class HomePage(QMainWindow):
         self.cancelBtn.clicked.connect(self.editor.hide)
         self.nameSel.currentIndexChanged.connect(self.autofill)
         self.closeEditorBtn.clicked.connect(self.editor.hide)
+        self.addBtn.clicked.connect(
+            lambda: (self.nameSel.setCurrentIndex(-1), self.editor.show())
+        )
 
     def showPassword(self):
         self.pwLine.setEchoMode(QLineEdit.Normal)
@@ -103,6 +111,15 @@ class HomePage(QMainWindow):
     def makeLogFunc(self):
         return self.logDisplay.show
 
+    def deleteSaved(self, name: str):
+        self.history.pop(name, None)
+        with open(self.jsonfile, "w") as out_file:
+            json.dump(self.history, out_file, indent=4)
+        self.load()
+
+    def makeDeleteFunc(self, name: str):
+        return lambda: self.deleteSaved(name)
+
     def load(self):
         # Load history from json file
         try:
@@ -114,7 +131,7 @@ class HomePage(QMainWindow):
             self.portSel.clear()
             self.userSel.clear()
             # Clear status panel
-            for i in reversed(range(self.entries.count())): 
+            for i in reversed(range(self.entries.count())):
                 self.entries.itemAt(i).widget().setParent(None)
 
             i = 0
@@ -131,22 +148,28 @@ class HomePage(QMainWindow):
                 # Bind functions
                 newEntry.editBtn.clicked.connect(self.makeEditFunc(i))
                 newEntry.logBtn.clicked.connect(self.makeLogFunc())
+                newEntry.deleteBtn.clicked.connect(self.makeDeleteFunc(key))
+                # Create associate QProcess object
+                # Be careful not to remove existing ones
+                if key not in self.processes:
+                    self.processes[key] = QProcess()
+                    # TODO: connect signals
                 # Update index counter
                 i += 1
-            
+
             self.autofill(self.history["Previous"])
         except FileNotFoundError:
             self.history = {}
 
-        # Finally, add a "Custom" entry
-        newEntry = Entry("(Custom connection)")
-        newEntry.editBtn.clicked.connect(
-            lambda: (self.nameSel.setCurrentIndex(-1), self.editor.show())
-        )
-        # Disable buttons
-        newEntry.startBtn.setDisabled(True)
-        newEntry.logBtn.setDisabled(True)
-        self.entries.addWidget(newEntry)
+        # # Finally, add a "Custom" entry
+        # newEntry = Entry("(Custom connection)")
+        # newEntry.editBtn.clicked.connect(
+        #     lambda: (self.nameSel.setCurrentIndex(-1), self.editor.show())
+        # )
+        # # Disable buttons
+        # newEntry.startBtn.setDisabled(True)
+        # newEntry.logBtn.setDisabled(True)
+        # self.entries.addWidget(newEntry)
 
     def submit(self):
         # Retrieve log in info
@@ -174,7 +197,7 @@ class HomePage(QMainWindow):
             subprocess.run(cmd)
             self.toast("Successful.")
         except Exception:
-            self.toast("A problem has occured. Please check error.log for details.")
+            self.toast("A problem has occured. Please check log for details.")
             with open("error.log", "w") as outfile:
                 outfile.write(traceback.format_exc())
             self.toast(traceback.format_exc())
@@ -183,7 +206,14 @@ class HomePage(QMainWindow):
         # using try-except because this function could fail when reloading
         try:
             if (self.nameSel.currentIndex() != index):
+                # Make sure the indexChanged signal is only emitted once
                 self.nameSel.setCurrentIndex(index)
+            else:
+                if (self.urlSel.currentIndex() == index and
+                        self.portSel.currentIndex() == index and
+                        self.userSel.currentIndex() == index):
+                    # Already selected so return directly
+                    return
             self.urlSel.setCurrentIndex(index)
             self.portSel.setCurrentIndex(index)
             self.userSel.setCurrentIndex(index)
