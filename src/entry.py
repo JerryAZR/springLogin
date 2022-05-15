@@ -26,6 +26,8 @@ class Entry(QWidget):
         self.logBtn.setIcon(QIcon(os.path.join(myPath, "ui", logIcon)))
         editIcon = "playlist-edit.svg"
         self.editBtn.setIcon(QIcon(os.path.join(myPath, "ui", editIcon)))
+        trashIcon = "trash-can.svg"
+        self.deleteBtn.setIcon(QIcon(os.path.join(myPath, "ui", trashIcon)))
 
     def initActions(self):
         # Connect signals and slots

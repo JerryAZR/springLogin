@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>670</width>
-    <height>364</height>
+    <height>411</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -116,7 +116,7 @@
              <x>0</x>
              <y>0</y>
              <width>298</width>
-             <height>238</height>
+             <height>285</height>
             </rect>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -162,7 +162,7 @@
        </layout>
       </item>
       <item>
-       <widget class="QWidget" name="editorWidget" native="true">
+       <widget class="QWidget" name="editor" native="true">
         <layout class="QVBoxLayout" name="verticalLayout">
          <property name="leftMargin">
           <number>0</number>

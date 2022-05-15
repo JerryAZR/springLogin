@@ -8,7 +8,8 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QMainWindow,
     QLineEdit,
-    QMessageBox
+    QMessageBox,
+    QVBoxLayout
 )
 from entry import Entry
 from logdisplay import LogDisplay
@@ -26,7 +27,7 @@ class HomePage(QMainWindow):
         self.initActions()
         # Hide editor and log on start up
         self.logDisplay.hide()
-        self.editorWidget.hide()
+        self.editor.hide()
 
     def initUI(self):
         # Load the Qt ui (xml) file
@@ -49,9 +50,9 @@ class HomePage(QMainWindow):
         self.showBtn.released.connect(self.hidePassword)
         self.loginBtn.clicked.connect(self.submit)
         self.saveBtn.clicked.connect(self.save)
-        self.cancelBtn.clicked.connect(self.editorWidget.hide)
+        self.cancelBtn.clicked.connect(self.editor.hide)
         self.nameSel.currentIndexChanged.connect(self.autofill)
-        self.closeEditorBtn.clicked.connect(self.editorWidget.hide)
+        self.closeEditorBtn.clicked.connect(self.editor.hide)
 
     def showPassword(self):
         self.pwLine.setEchoMode(QLineEdit.Normal)
@@ -97,7 +98,7 @@ class HomePage(QMainWindow):
         self.pwLine.setText(password)
 
     def makeEditFunc(self, index: int):
-        return lambda: (self.autofill(index), self.editorWidget.show())
+        return lambda: (self.autofill(index), self.editor.show())
 
     def makeLogFunc(self):
         return self.logDisplay.show
@@ -112,6 +113,9 @@ class HomePage(QMainWindow):
             self.urlSel.clear()
             self.portSel.clear()
             self.userSel.clear()
+            # Clear status panel
+            for i in reversed(range(self.entries.count())): 
+                self.entries.itemAt(i).widget().setParent(None)
 
             i = 0
             for key in self.history:
@@ -133,6 +137,16 @@ class HomePage(QMainWindow):
             self.autofill(self.history["Previous"])
         except FileNotFoundError:
             self.history = {}
+
+        # Finally, add a "Custom" entry
+        newEntry = Entry("(Custom connection)")
+        newEntry.editBtn.clicked.connect(
+            lambda: (self.nameSel.setCurrentIndex(-1), self.editor.show())
+        )
+        # Disable buttons
+        newEntry.startBtn.setDisabled(True)
+        newEntry.logBtn.setDisabled(True)
+        self.entries.addWidget(newEntry)
 
     def submit(self):
         # Retrieve log in info
