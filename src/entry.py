@@ -33,7 +33,8 @@ class Entry(QWidget):
     def initActions(self):
         # Connect signals and slots
         # This is only a test
-        self.startBtn.clicked.connect(self.toggle)
+        # self.startBtn.clicked.connect(self.toggle)
+        return
 
     # Setters
     def setName(self, name: str):

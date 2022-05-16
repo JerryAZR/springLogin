@@ -16,7 +16,7 @@ from logdisplay import LogDisplay
 
 
 class HomePage(QMainWindow):
-    java = "java"
+    java = "upx"
     project = "demo.jar"
     jsonfile = "history.json"
 
@@ -105,20 +105,47 @@ class HomePage(QMainWindow):
         # Restore password
         self.pwLine.setText(password)
 
+    # Signal handlers (slots)
     def makeEditFunc(self, index: int):
         return lambda: (self.autofill(index), self.editor.show())
 
-    def makeLogFunc(self):
-        return self.logDisplay.show
-
-    def deleteSaved(self, name: str):
-        self.history.pop(name, None)
-        with open(self.jsonfile, "w") as out_file:
-            json.dump(self.history, out_file, indent=4)
-        self.load()
+    def makeLogFunc(self, name: str):
+        def setupLog():
+            if self.logDisplay.name != name:
+                self.logDisplay.setName(name)
+                self.logDisplay.addText('-' * 32)
+                self.logDisplay.addText(f"Streaming log of {name}")
+                self.logDisplay.addText('-' * 32)
+            self.logDisplay.show()
+        return setupLog
 
     def makeDeleteFunc(self, name: str):
-        return lambda: self.deleteSaved(name)
+        def deleteSaved():
+            self.history.pop(name, None)
+            with open(self.jsonfile, "w") as out_file:
+                json.dump(self.history, out_file, indent=4)
+            self.load()
+        return deleteSaved
+
+    def makeLogHandlerFunc(self, name: str):
+        def handler():
+            log = str(self.processes[name].readAll(), "utf-8")
+            # Always write to the log file
+            with open(name + ".log", "a") as logFile:
+                logFile.write(log)
+            # Write to log display area only if selected
+            if self.logDisplay.name == name:
+                self.logDisplay.addText(log)
+        return handler
+
+    def makeStartFunc(self, index: int, name: str):
+        def toggleState():
+            if self.processes[name].state() == QProcess.NotRunning:
+                self.autofill(index)
+                self.submit()
+            else:
+                self.processes[name].kill()
+        return toggleState
 
     def load(self):
         # Load history from json file
@@ -147,13 +174,22 @@ class HomePage(QMainWindow):
                 self.entries.addWidget(newEntry)
                 # Bind functions
                 newEntry.editBtn.clicked.connect(self.makeEditFunc(i))
-                newEntry.logBtn.clicked.connect(self.makeLogFunc())
+                newEntry.logBtn.clicked.connect(self.makeLogFunc(key))
                 newEntry.deleteBtn.clicked.connect(self.makeDeleteFunc(key))
+                newEntry.startBtn.clicked.connect(self.makeStartFunc(i, key))
                 # Create associate QProcess object
                 # Be careful not to remove existing ones
                 if key not in self.processes:
                     self.processes[key] = QProcess()
-                    # TODO: connect signals
+                    self.processes[key].setProcessChannelMode(
+                        QProcess.MergedChannels
+                    )
+                    # TODO: connect error signals
+                    self.processes[key].started.connect(newEntry.turnOn)
+                    self.processes[key].finished.connect(newEntry.turnOff)
+                    self.processes[key].readyRead.connect(
+                        self.makeLogHandlerFunc(key)
+                    )
                 # Update index counter
                 i += 1
 
@@ -192,15 +228,18 @@ class HomePage(QMainWindow):
         option2 = f"--spring.datasource.username={username}"
         option3 = f"--spring.datasource.password={password}"
         option4 = f"--server.port={port}"
-        cmd = [self.java, "-jar", self.project, option1, option2, option3, option4]
-        try:
-            subprocess.run(cmd)
+        args = ["-jar", self.project, option1, option2, option3, option4]
+
+        if name not in self.processes:
+            # Create new if not found
+            self.processes[name] = QProcess()
+        self.processes[name].start(self.java, args)
+        # Probably not a good idea to call this in the UI thread
+        # TODO: Fix it so the UI thread is not blocked
+        if self.processes[name].waitForStarted():
             self.toast("Successful.")
-        except Exception:
-            self.toast("A problem has occured. Please check log for details.")
-            with open("error.log", "w") as outfile:
-                outfile.write(traceback.format_exc())
-            self.toast(traceback.format_exc())
+        else:
+            self.toast(self.processes[name].errorString())
 
     def autofill(self, index):
         # using try-except because this function could fail when reloading
