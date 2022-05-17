@@ -18,6 +18,7 @@ class HomePage(QMainWindow):
     java = "java"
     project = "demo.jar"
     jsonfile = "history.json"
+    helperDialects = ["dialect1", "dialect2"]
 
     def __init__(self) -> None:
         super(HomePage, self).__init__()
@@ -41,6 +42,8 @@ class HomePage(QMainWindow):
         addIcon = "plus.svg"
         self.addBtn.setIcon(QIcon(os.path.join(myPath, "ui", addIcon)))
         self.centralLayout.addWidget(self.logDisplay)
+        # Update helperDialect combo box
+        self.helperSel.addItems(self.helperDialects)
         # TODO: Scale the image to fit window
         self.setStyleSheet(
             "QMainWindow {\
@@ -72,6 +75,7 @@ class HomePage(QMainWindow):
         name = self.nameSel.currentText()
         url = self.urlSel.currentText()
         port = self.portSel.currentText()
+        helperIdx = self.helperSel.currentIndex()
         username = self.userSel.currentText()
         password = self.pwLine.text()
         # Verify user input
@@ -89,11 +93,12 @@ class HomePage(QMainWindow):
         jentry = {
             "url": url,
             "port": port,
-            "user": username
+            "user": username,
+            "helper": helperIdx
         }
         # Auto generate name if none provided
         if name == "":
-            name = url
+            name = f"{username}@{url}:{port}"
         # TODO: warn user on overwrite
         self.history[name] = jentry
         self.history["Previous"] = self.nameSel.currentIndex()
@@ -253,6 +258,12 @@ class HomePage(QMainWindow):
     def autofill(self, index):
         # using try-except because this function could fail when reloading
         try:
+            entryName = self.nameSel.currentText()
+            entry = self.history[entryName]
+            # Get pagehelper.helperDialect (Always update selection)
+            helperIdx = entry["helper"]
+            self.helperSel.setCurrentIndex(helperIdx)
+
             if (self.nameSel.currentIndex() != index):
                 # Make sure the indexChanged signal is only emitted once
                 self.nameSel.setCurrentIndex(index)
@@ -267,8 +278,6 @@ class HomePage(QMainWindow):
             self.userSel.setCurrentIndex(index)
 
             # Get password
-            entryName = self.nameSel.currentText()
-            entry = self.history[entryName]
             system = f"{entry['url']}:{entry['port']}"
             password = keyring.get_password(system, entry["user"])
             if password:
