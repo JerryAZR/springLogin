@@ -1,7 +1,5 @@
 import keyring
 import json
-import subprocess
-import traceback
 import os
 from PyQt5 import uic
 from PyQt5.QtCore import QProcess
@@ -13,10 +11,11 @@ from PyQt5.QtWidgets import (
 )
 from entry import Entry
 from logdisplay import LogDisplay
+from pwdialog import PwDialog
 
 
 class HomePage(QMainWindow):
-    java = "upx"
+    java = "java"
     project = "demo.jar"
     jsonfile = "history.json"
 
@@ -142,6 +141,8 @@ class HomePage(QMainWindow):
         def toggleState():
             if self.processes[name].state() == QProcess.NotRunning:
                 self.autofill(index)
+                # Set up log display
+                self.logDisplay.setName(name)
                 self.submit()
             else:
                 self.processes[name].kill()
@@ -216,9 +217,15 @@ class HomePage(QMainWindow):
         password = self.pwLine.text()
         # Save (Maybe make this optional?)
         # self.save()
-        if url == "" or port == "" or username == "" or password == "":
+        if url == "" or port == "" or username == "":
             self.toast("Missing log in information")
             return
+        if password == "":
+            askPass = PwDialog(f"{username}@{url}:{port}")
+            if askPass.exec_() == askPass.Accepted:
+                password = askPass.password()
+            else:
+                return
         # Update history
         self.history["Previous"] = self.nameSel.currentIndex()
         with open(self.jsonfile, "w") as out_file:
@@ -228,6 +235,8 @@ class HomePage(QMainWindow):
         option2 = f"--spring.datasource.username={username}"
         option3 = f"--spring.datasource.password={password}"
         option4 = f"--server.port={port}"
+        # TODO: Add option
+        # pagehelper.helperDialect
         args = ["-jar", self.project, option1, option2, option3, option4]
 
         if name not in self.processes:
@@ -237,7 +246,7 @@ class HomePage(QMainWindow):
         # Probably not a good idea to call this in the UI thread
         # TODO: Fix it so the UI thread is not blocked
         if self.processes[name].waitForStarted():
-            self.toast("Successful.")
+            pass
         else:
             self.toast(self.processes[name].errorString())
 
