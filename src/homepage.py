@@ -1,6 +1,7 @@
 import keyring
 import json
 import os
+import traceback
 from PyQt5 import uic
 from PyQt5.QtCore import QProcess
 from PyQt5.QtGui import QIcon
@@ -218,6 +219,7 @@ class HomePage(QMainWindow):
         name = self.nameSel.currentText()
         url = self.urlSel.currentText()
         port = self.portSel.currentText()
+        helper = self.helperSel.currentText()
         username = self.userSel.currentText()
         password = self.pwLine.text()
         # Save (Maybe make this optional?)
@@ -236,13 +238,12 @@ class HomePage(QMainWindow):
         with open(self.jsonfile, "w") as out_file:
             json.dump(self.history, out_file, indent=4)
         # Construct command
-        option1 = f"--spring.datasource.url={url}"
-        option2 = f"--spring.datasource.username={username}"
-        option3 = f"--spring.datasource.password={password}"
-        option4 = f"--server.port={port}"
-        # TODO: Add option
-        # pagehelper.helperDialect
-        args = ["-jar", self.project, option1, option2, option3, option4]
+        op1 = f"--spring.datasource.url={url}"
+        op2 = f"--spring.datasource.username={username}"
+        op3 = f"--spring.datasource.password={password}"
+        op4 = f"--server.port={port}"
+        op5 = f"--pagehelper.helperDialect={helper}"
+        args = ["-jar", self.project, op1, op2, op3, op4, op5]
 
         if name not in self.processes:
             # Create new if not found
@@ -286,8 +287,8 @@ class HomePage(QMainWindow):
             else:
                 self.pwLine.setText("")
                 self.saveCheck.setChecked(False)
-        except Exception as e:
-            print(e)
+        except Exception:
+            traceback.print_exc()
 
     def toast(self, message):
         box = QMessageBox(QMessageBox.Warning, "Warning", message)
