@@ -260,10 +260,13 @@ class HomePage(QMainWindow):
         # using try-except because this function could fail when reloading
         try:
             entryName = self.nameSel.currentText()
-            entry = self.history[entryName]
-            # Get pagehelper.helperDialect (Always update selection)
-            helperIdx = entry["helper"]
-            self.helperSel.setCurrentIndex(helperIdx)
+            if entryName in self.history:
+                entry = self.history[entryName]
+                # Get pagehelper.helperDialect (Always update selection)
+                helperIdx = entry["helper"]
+                self.helperSel.setCurrentIndex(helperIdx)
+            else:
+                entry = None
 
             if (self.nameSel.currentIndex() != index):
                 # Make sure the indexChanged signal is only emitted once
@@ -279,11 +282,12 @@ class HomePage(QMainWindow):
             self.userSel.setCurrentIndex(index)
 
             # Get password
-            system = f"{entry['url']}:{entry['port']}"
-            password = keyring.get_password(system, entry["user"])
-            if password:
-                self.pwLine.setText(password)
-                self.saveCheck.setChecked(True)
+            if entry is not None:
+                system = f"{entry['url']}:{entry['port']}"
+                password = keyring.get_password(system, entry["user"])
+                if password:
+                    self.pwLine.setText(password)
+                    self.saveCheck.setChecked(True)
             else:
                 self.pwLine.setText("")
                 self.saveCheck.setChecked(False)
