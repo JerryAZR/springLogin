@@ -102,12 +102,12 @@ class HomePage(QMainWindow):
             name = f"{username}@{url}:{port}"
         # TODO: warn user on overwrite
         self.history[name] = jentry
-        self.history["Previous"] = self.nameSel.currentIndex()
         with open(self.jsonfile, "w") as out_file:
             json.dump(self.history, out_file, indent=4)
         # Reload selections
         self.load()
-        # Restore password
+        # Restore everything
+        self.autofill(self.nameSel.findText(name))
         self.pwLine.setText(password)
 
     # Signal handlers (slots)
@@ -200,7 +200,6 @@ class HomePage(QMainWindow):
                 # Update index counter
                 i += 1
 
-            self.autofill(self.history["Previous"])
         except FileNotFoundError:
             self.history = {}
 
@@ -233,10 +232,7 @@ class HomePage(QMainWindow):
                 password = askPass.password()
             else:
                 return
-        # Update history
-        self.history["Previous"] = self.nameSel.currentIndex()
-        with open(self.jsonfile, "w") as out_file:
-            json.dump(self.history, out_file, indent=4)
+
         # Construct command
         op1 = f"--spring.datasource.url={url}"
         op2 = f"--spring.datasource.username={username}"
