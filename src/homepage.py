@@ -3,7 +3,7 @@ import json
 import os
 import traceback
 from PyQt5 import uic
-from PyQt5.QtCore import QProcess
+from PyQt5.QtCore import QProcess, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -27,11 +27,13 @@ class HomePage(QMainWindow):
         self.processes = {}
         self.logDisplay = LogDisplay()
         self.initUI()
+        self.defaultSize = self.size()
         self.load()
         self.initActions()
         # Hide editor and log on start up
         self.logDisplay.hide()
         self.editor.hide()
+        self.scheduleResize()
 
     def initUI(self):
         # Load the Qt ui (xml) file
@@ -52,15 +54,23 @@ class HomePage(QMainWindow):
                 background-position: top left;\
                 background-origin: content;}")
 
+    def scheduleResize(self):
+        timer = QTimer(self)
+        # Give the engine some time to process queued events
+        timer.singleShot(10, lambda: self.resize(self.minimumSizeHint()))
+
     def initActions(self):
         # Connect signals and slots (handlers)
         self.showBtn.pressed.connect(self.showPassword)
         self.showBtn.released.connect(self.hidePassword)
         self.loginBtn.clicked.connect(self.submit)
         self.saveBtn.clicked.connect(self.save)
-        self.cancelBtn.clicked.connect(self.editor.hide)
+        self.cancelBtn.clicked.connect(self.closeEditorBtn.click)
         self.nameSel.currentIndexChanged.connect(self.autofill)
-        self.closeEditorBtn.clicked.connect(self.editor.hide)
+        self.closeEditorBtn.clicked.connect(
+            lambda: (self.editor.hide(), self.scheduleResize())
+        )
+        self.logDisplay.closeBtn.clicked.connect(self.scheduleResize)
         self.addBtn.clicked.connect(
             lambda: (self.nameSel.setCurrentIndex(-1), self.editor.show())
         )
