@@ -126,11 +126,7 @@ class HomePage(QMainWindow):
 
     def makeLogFunc(self, name: str):
         def setupLog():
-            if self.logDisplay.name != name:
-                self.logDisplay.setName(name)
-                self.logDisplay.addText('-' * 32)
-                self.logDisplay.addText(f"Streaming log of {name}")
-                self.logDisplay.addText('-' * 32)
+            self.logDisplay.setName(name)
             self.logDisplay.show()
         return setupLog
 
@@ -148,9 +144,8 @@ class HomePage(QMainWindow):
             # Always write to the log file
             with open(name + ".log", "a") as logFile:
                 logFile.write(log)
-            # Write to log display area only if selected
-            if self.logDisplay.name == name:
-                self.logDisplay.addText(log)
+            # Write to log display area
+            self.logDisplay.addText(name, log)
         return handler
 
     def makeStartFunc(self, index: int, name: str):
